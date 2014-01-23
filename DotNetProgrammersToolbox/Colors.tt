@@ -1,0 +1,467 @@
+<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Web.dll" #>
+<#@ assembly name="System.Drawing.dll" #>
+<#@ assembly name="System.Core.dll" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Drawing" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Web.UI" #>
+<#@ import namespace="System.Web.UI.HtmlControls" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".html" #>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head><title>.NET Development Color Reference</title>
+		<style type="text/css">
+			body 
+			{
+				font-family: Arial, Helvetica, sans-serif;
+				color:Black;
+				background-color:White;
+			}
+			table.outer
+			{
+				border-collapse:separate;
+			}
+			table.outer th
+			{
+				vertical-align:bottom;
+				white-space: nowrap;
+			}
+			table.outer td
+			{
+				vertical-align:top;
+				margin:8px;
+				padding:0px;
+				white-space: nowrap;
+			}
+			table.inner
+			{
+				border-collapse:collapse;
+				border-style: solid;
+				border-width:1px;
+				border-color: Black;
+			}
+			table.inner td
+			{
+				vertical-align: top;
+				margin:0px;
+				padding:8px;
+				white-space: nowrap;
+			}
+			td.colorName 
+			{
+				text-align: right;
+				font-weight: bold;
+			}
+			td.colorExample
+			{
+				width:50px;
+				height:25px;
+			}
+		</style>
+	</head>
+	<body>
+<#=this.GetTable()#>
+	</body>
+</html>
+<#+
+    public class ColorValues : IComparable<ColorValues>, IEquatable<ColorValues>
+    {
+        public KnownColor KnownColorValue { get; private set; }
+        public Color ColorValue { get; private set; }
+        public string Name { get; private set; }
+        public string RGB { get; private set; }
+        public string CssColorValue { get; private set; }
+        public bool IsNamedWebColor { get; private set; }
+        public float Saturation { get; private set; }
+        public float Brightness { get; private set; }
+        public float Hue { get; private set; }
+
+        private ColorValues() { }
+
+        public ColorValues(KnownColor knownColor) : this(knownColor, Color.FromKnownColor(knownColor)) { }
+
+        public ColorValues(ColorValues colorValues)
+        {
+            this.Brightness = colorValues.Brightness;
+            this.ColorValue = colorValues.ColorValue;
+            this.CssColorValue = colorValues.CssColorValue;
+            this.Hue = colorValues.Hue;
+            this.IsNamedWebColor = colorValues.IsNamedWebColor;
+            this.KnownColorValue = colorValues.KnownColorValue;
+            this.Name = colorValues.Name;
+            this.RGB = colorValues.RGB;
+            this.Saturation = colorValues.Saturation;
+        }
+
+        public ColorValues(Color color) : this(color.ToKnownColor(), color) { }
+
+        private ColorValues(KnownColor knownColor, Color color)
+        {
+            this.KnownColorValue = knownColor;
+            this.ColorValue = color;
+            this.Saturation = color.GetSaturation();
+            this.Brightness = color.GetBrightness();
+            this.Hue = color.GetHue();
+            this.RGB = String.Format("#{0:x2}{1:x2}{2:x2}", color.R, color.G, color.B);
+            this.Name = color.Name;
+            switch (knownColor)
+            {
+                case KnownColor.Aqua:
+                case KnownColor.Black:
+                case KnownColor.Blue:
+                case KnownColor.Fuchsia:
+                case KnownColor.Gray:
+                case KnownColor.Green:
+                case KnownColor.Lime:
+                case KnownColor.Maroon:
+                case KnownColor.Navy:
+                case KnownColor.Olive:
+                case KnownColor.Orange:
+                case KnownColor.Purple:
+                case KnownColor.Red:
+                case KnownColor.Silver:
+                case KnownColor.Teal:
+                case KnownColor.White:
+                case KnownColor.Yellow:
+                    this.IsNamedWebColor = (color.IsKnownColor);
+                    if (this.IsNamedWebColor)
+                        this.CssColorValue = knownColor.ToString("F").ToLower();
+                    else if (color.A > 0)
+                        this.CssColorValue = this.RGB;
+                    break;
+                default:
+                    this.IsNamedWebColor = false;
+                    if (!this.ColorValue.IsSystemColor && this.ColorValue.A > 0)
+                        this.CssColorValue = this.RGB;
+                    break;
+            }
+        }
+
+        private Color ColorFromHsb(float h, float s, float b)
+        {
+            if (s == 0)
+                return Color.FromArgb(255, Convert.ToInt32(b * 255), Convert.ToInt32(b * 255), Convert.ToInt32(b * 255));
+
+            float fMax, fMid, fMin;
+            int iSextant, iMax, iMid, iMin;
+
+            if (b > 0.5)
+            {
+                fMax = b - (b * s) + s;
+                fMin = b + (b * s) - s;
+            }
+            else
+            {
+                fMax = b + (b * s);
+                fMin = b - (b * s);
+            }
+
+            iSextant = (int)Math.Floor(h / 60f);
+            if (h >= 300f)
+                h -= 360f;
+
+            h /= 60f;
+            h -= 2f * (float)Math.Floor(((iSextant + 1f) % 6f) / 2f);
+            if (iSextant % 2 == 0)
+                fMid = h * (fMax - fMin) + fMin;
+            else
+                fMid = fMin - h * (fMax - fMin);
+
+            iMax = Convert.ToInt32(fMax * 255);
+            iMid = Convert.ToInt32(fMid * 255);
+            iMin = Convert.ToInt32(fMin * 255);
+
+            switch (iSextant)
+            {
+                case 1:
+                    return Color.FromArgb(255, iMid, iMax, iMin);
+                case 2:
+                    return Color.FromArgb(255, iMin, iMax, iMid);
+                case 3:
+                    return Color.FromArgb(255, iMin, iMid, iMax);
+                case 4:
+                    return Color.FromArgb(255, iMid, iMin, iMax);
+                case 5:
+                    return Color.FromArgb(255, iMax, iMin, iMid);
+            }
+
+            return Color.FromArgb(255, iMax, iMid, iMin);
+        }
+
+        internal ColorValues GetAlternateBrightness()
+        {
+            float b = this.Brightness;
+
+            int l = ((int)(this.ColorValue.R) + (int)(this.ColorValue.G) + (int)(this.ColorValue.B)) / 3;
+
+            b = (l > 128) ? (1f - b) / 4f : 1f - (b / 4f);
+
+            return new ColorValues(this.ColorFromHsb(this.Hue, this.Saturation, b));
+        }
+
+        internal ColorValues GetInverseColor()
+        {
+            float h = this.Hue;
+            float s = this.Saturation;
+            float b = this.Brightness;
+
+            int l = ((int)(this.ColorValue.R) + (int)(this.ColorValue.G) + (int)(this.ColorValue.B)) / 3;
+
+            b = (l > 128) ? (1f - b) * s : 1f - b * s;
+
+            return new ColorValues(this.ColorFromHsb(h + ((h < 180f) ? 180f : -180f), s, b));
+        }
+
+        public int GetDistance(ColorValues other)
+        {
+            // TODO: This has some issues and needs fixed
+            if (Object.ReferenceEquals(this, other))
+                return 0;
+
+            int r = (int)((this.ColorValue.R > other.ColorValue.R) ? this.ColorValue.R - other.ColorValue.R : other.ColorValue.R - this.ColorValue.R);
+            int g = (int)((this.ColorValue.R > other.ColorValue.G) ? this.ColorValue.G - other.ColorValue.G : other.ColorValue.G - this.ColorValue.G);
+            int b = (int)((this.ColorValue.R > other.ColorValue.B) ? this.ColorValue.B - other.ColorValue.B : other.ColorValue.B - this.ColorValue.B);
+
+            return (r + g + b) / 3;
+        }
+
+        public int CompareTo(ColorValues other)
+        {
+            if (other == null)
+                return 1;
+
+            if (Object.ReferenceEquals(this, other))
+                return 0;
+
+            if (this.Hue != other.Hue)
+                return this.Hue.CompareTo(other.Hue);
+
+            if (this.Brightness != other.Brightness)
+                return this.Brightness.CompareTo(other.Brightness);
+
+            return this.Saturation.CompareTo(other.Saturation);
+        }
+
+        public bool Equals(ColorValues other)
+        {
+            return this.CompareTo(other) == 0;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return this.Equals(obj as ColorValues);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.RGB.GetHashCode();
+            // TODO: Test this to see if this would be faster than using the string value's hash code
+            //return Convert.ToInt32(((this.Hue - 180f) + ((this.Brightness - 0.5f) * 25600f) + ((this.Saturation - 0.5f) * 51200)) * 27896f);
+        }
+    }
+
+    public class ColorOutputDetail : ColorValues
+    {
+        public ColorValues Inverse { get; set; }
+        public ColorValues NearestNamedInverse { get; set; }
+        public ColorValues AlternateBrightness { get; set; }
+        public ColorValues NearestNamedAlternateBrightness { get; set; }
+
+        public ColorOutputDetail(ColorValues colorValues, IEnumerable<ColorValues> knownColors) : base(colorValues)
+        {
+            ColorValues inverse = colorValues.GetInverseColor();
+            ColorValues alternateBrightness = colorValues.GetAlternateBrightness();
+
+            this.Inverse = knownColors.FirstOrDefault(c => c.RGB == inverse.RGB);
+            if (this.Inverse == null)
+                this.Inverse = inverse;
+
+            this.NearestNamedInverse = knownColors.Select(c =>
+            {
+                int d = inverse.GetDistance(c);
+                return new { C = c, D = (d < 0) ? d * -1 : d };
+            }).OrderBy(a => a.D).First().C;
+
+            this.AlternateBrightness = knownColors.FirstOrDefault(c => c.RGB == alternateBrightness.RGB);
+            if (this.AlternateBrightness == null)
+                this.AlternateBrightness = alternateBrightness;
+
+            this.NearestNamedAlternateBrightness = knownColors.Select(c =>
+            {
+                int d = alternateBrightness.GetDistance(c);
+                return new { C = c, D = (d < 0) ? d * -1 : d };
+            }).OrderBy(a => a.D).First().C;
+        }
+    }
+	
+    private ColorValues[] _knownColorValues = null;
+    protected ColorValues[] KnownColorValues
+    {
+        get
+        {
+            if (this._knownColorValues == null)
+                this._knownColorValues = Enum.GetValues(typeof(KnownColor)).OfType<KnownColor>().Select(knownColor => new ColorValues(knownColor)).Where(a => a.CssColorValue != null).ToArray();
+
+            return this._knownColorValues;
+        }
+    }
+
+    private ColorOutputDetail[] _colors = null;
+    protected ColorOutputDetail[] Colors
+    {
+        get
+        {
+            if (this._colors == null)
+                this._colors = this.KnownColorValues.Select(knownColor => new ColorOutputDetail(knownColor, this.KnownColorValues)).ToArray();
+
+            return this._colors;
+        }
+    }
+
+    private string GetTable()
+    {
+        string result;
+        using (StringWriter sw = new StringWriter())
+        {
+            using (Html32TextWriter writer = new Html32TextWriter(sw))
+            {
+                using (HtmlTable htmlTable = new HtmlTable())
+                {
+                    HtmlTableRow row = new HtmlTableRow();
+                    htmlTable.Rows.Add(row);
+
+                    HtmlTableCell cell = new HtmlTableCell("th");
+                    row.Cells.Add(cell);
+                    cell.InnerText = "Name";
+
+                    cell = new HtmlTableCell("th");
+                    row.Cells.Add(cell);
+                    cell.InnerText = "RGB";
+
+                    cell = new HtmlTableCell("th");
+                    row.Cells.Add(cell);
+                    cell.ColSpan = 2;
+                    cell.InnerText = "Calculated Relative Colors";
+
+                    cell = new HtmlTableCell("th");
+                    row.Cells.Add(cell);
+                    cell.ColSpan = 2;
+                    cell.InnerText = "Nearest Named Relative Colors";
+
+                    Func<float, string> toPercentText = (float value) =>
+                    {
+                        return Math.Round((decimal)value * 100.0m, 2).ToString() + "%";
+                    };
+
+                    foreach (ColorOutputDetail color in this.Colors)
+                    {
+                        row = new HtmlTableRow();
+                        htmlTable.Rows.Add(row);
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.Attributes.Add("class", "colorName");
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.AlternateBrightness.CssColorValue);
+                        cell.InnerText = color.Name;
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.ColSpan = 5;
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.AlternateBrightness.CssColorValue);
+                        cell.InnerText = color.RGB;
+
+                        row = new HtmlTableRow();
+                        htmlTable.Rows.Add(row);
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.InnerHtml = "&nbsp;";
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.InnerText = "Inverse";
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.Inverse.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.Inverse.GetAlternateBrightness().CssColorValue);
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.InnerHtml = "&nbsp;";
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.Inverse.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.Inverse.GetAlternateBrightness().CssColorValue);
+                        cell.InnerText = color.Inverse.Name;
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.Inverse.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.Inverse.GetAlternateBrightness().CssColorValue);
+                        cell.InnerText = color.Inverse.RGB;
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.InnerHtml = "&nbsp;";
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.NearestNamedInverse.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.NearestNamedInverse.GetAlternateBrightness().CssColorValue);
+                        cell.InnerText = color.NearestNamedInverse.Name;
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.NearestNamedInverse.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.NearestNamedInverse.GetAlternateBrightness().CssColorValue);
+                        cell.InnerText = color.NearestNamedInverse.RGB;
+
+                        row = new HtmlTableRow();
+                        htmlTable.Rows.Add(row);
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.InnerHtml = "&nbsp;";
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.InnerText = "Alternate Brightness:";
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.AlternateBrightness.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.AlternateBrightness.GetAlternateBrightness().CssColorValue);
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.InnerHtml = "&nbsp;";
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.AlternateBrightness.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.AlternateBrightness.GetAlternateBrightness().CssColorValue);
+                        cell.InnerText = color.AlternateBrightness.Name;
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.AlternateBrightness.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.AlternateBrightness.GetAlternateBrightness().CssColorValue);
+                        cell.InnerText = color.AlternateBrightness.RGB;
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.InnerHtml = "&nbsp;";
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.NearestNamedAlternateBrightness.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.NearestNamedAlternateBrightness.GetAlternateBrightness().CssColorValue);
+                        cell.InnerText = color.NearestNamedAlternateBrightness.Name;
+
+                        cell = new HtmlTableCell();
+                        row.Cells.Add(cell);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.BackgroundColor, color.NearestNamedAlternateBrightness.CssColorValue);
+                        cell.Attributes.CssStyle.Add(HtmlTextWriterStyle.Color, color.NearestNamedAlternateBrightness.GetAlternateBrightness().CssColorValue);
+                        cell.InnerText = color.NearestNamedAlternateBrightness.RGB;
+                    }
+
+                    htmlTable.RenderControl(writer);
+                }
+
+                writer.Flush();
+                result = sw.ToString();
+            }
+        }
+
+        return result;
+    }
+#>
