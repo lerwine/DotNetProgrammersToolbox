@@ -1,0 +1,101 @@
+﻿body
+{
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+div.master
+{
+    margin: 0px;
+    padding: 0px;
+}
+
+div.master>div
+{
+    margin: 0px;
+    float:left;
+}
+
+div.master>div
+{
+    padding: 0px 0px 0px 8px;
+}
+
+div.master>div:first-child
+{
+    padding: 0px;
+}
+
+div.menu
+{
+    padding: 4px 0px 4px 8px;
+}
+
+div.menu ul
+{
+    margin: 0px;
+    padding: 0px;
+    width: auto;
+}
+
+div.menu ul li a, div.menu ul li a:visited
+{
+    background-color: #465c71;
+    border: 1px #4e667d solid;
+    color: #dde4ec;
+    display: block;
+    line-height: 1.35em;
+    padding: 4px 20px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+div.menu ul li a:hover
+{
+    background-color: #bfcbd6;
+    color: #465c71;
+    text-decoration: none;
+}
+
+div.menu ul li a:active
+{
+    background-color: #465c71;
+    color: #cfdbe6;
+    text-decoration: none;
+}
+
+table.editForm
+{
+    border-collapse: collapse;
+    border-style: none;
+}
+
+table.editForm>tr>td
+{
+    vertical-align: top;
+    border-style:none;
+    padding: 4px 0px 0px 4px;
+}
+
+table.editForm > tr:first-child > td
+{
+    padding-top: 0px;
+}
+
+table.editForm > tr > td:first-child
+{
+    padding-left: 0px;
+    text-align: right;
+    font-weight: bold;
+}
+
+table.editForm > tr > td:first-child + td + td
+{
+    padding-left: 8px;
+    text-align: right;
+    font-weight: bold;
+}
+
+.error
+{
+    color: #cc0000;
+}

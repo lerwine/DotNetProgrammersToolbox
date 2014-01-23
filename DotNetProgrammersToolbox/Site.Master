@@ -1,0 +1,31 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="DotNetProgrammersToolbox.SiteMaster" %>
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head runat="server">
+    <title></title>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta http-equiv="Content-Style-Type" content="text/css" />
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server">
+    </asp:ContentPlaceHolder>
+</head>
+<body>
+    <form runat="server">
+    <div class="master">
+        <h1>.NET Programmer's Toolbox</h1>
+        <div>
+            <asp:Menu ID="NavigationMenu" runat="server" CssClass="menu" EnableViewState="false" IncludeStyleBlock="false" Orientation="Vertical">
+                <Items>
+                    <asp:MenuItem NavigateUrl="~/Default.aspx" Text="Home" />
+                    <asp:MenuItem NavigateUrl="~/About.aspx" Text="About" />
+                    <asp:MenuItem NavigateUrl="~/RegexPatterns/Default.aspx" Text="Regular Expressions" Value="Regular Expressions" />
+                </Items>
+            </asp:Menu>
+        </div>
+        <div>
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+        </div>
+    </div>
+    </form>
+</body>
+</html>

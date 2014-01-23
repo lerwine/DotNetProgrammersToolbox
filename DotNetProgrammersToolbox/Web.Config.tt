@@ -1,0 +1,262 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ output extension=".cs" #>
+<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Web" #>
+<#@ assembly name="System.Xml" #>
+<#@ assembly name="System.Xml.Linq" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text.RegularExpressions" #>
+<#@ import namespace="System.Web" #>
+<#@ import namespace="System.Xml.Linq" #>
+<#
+IServiceProvider serviceProvider = (IServiceProvider)this.Host;
+DTE dte = (DTE)(serviceProvider.GetService(typeof(DTE)));
+
+// Get ProjectItem representing the template file
+ProjectItem projectItem = dte.Solution.FindProjectItem(Host.TemplateFile);
+
+string namespaceName = projectItem.Properties.Item("CustomToolNamespace").Value.ToString();
+
+if (String.IsNullOrWhiteSpace(namespaceName))
+{
+	// Get the Project of the template file
+	Project project = projectItem.ContainingProject;
+
+	// Get the root namespace of the project
+	namespaceName = (string)project.Properties.Item("RootNamespace").Value;
+}
+
+string className = Regex.Replace(Path.GetFileNameWithoutExtension(Host.TemplateFile), @"[^a-zA-Z0-9_.]", (Match m) =>
+{
+    return String.Format("_x{0:X2}_", Convert.ToInt32(m.Value[0]));
+}).Replace('.', '_');
+
+if (Regex.IsMatch(className, @"^[0-9]"))
+	className = "N" + className + "_";
+else if (className.StartsWith("_"))
+	className = "U" + className;
+
+string fullTemplateFilePath = this.Host.ResolvePath(Host.TemplateFile);
+string webConfigPath = Path.Combine(Path.GetDirectoryName(fullTemplateFilePath), Path.GetFileNameWithoutExtension(fullTemplateFilePath));
+XDocument webConfig;
+if (File.Exists(webConfigPath))
+{
+    try
+    {
+        webConfig = XDocument.Parse(File.ReadAllText(webConfigPath));
+    }
+    catch
+    {
+        webConfig = new XDocument(new XElement("configuration"));
+    }
+}
+else
+    webConfig = new XDocument(new XElement("configuration"));
+
+EnsureConnectionStrings(webConfig);
+EnsureSystemWeb(webConfig);
+EnsureSystemWebServer(webConfig);
+this.GenerationEnvironment.Clear();
+#>
+namespace <#=namespaceName#>
+{
+	public partial class <#=className#>
+	{
+        public const string ConnectionStringsKey_ApplicationServices = "ApplicationServices";
+        public const string ConnectionStringsKey_LDAPRoot = "LDAPRoot";
+        public const string ProviderName_AspNetSqlMembershipProvider = "AspNetSqlMembershipProvider";
+        public const string ProviderName_AspNetSqlProfileProvider = "AspNetSqlProfileProvider";
+        public const string ProviderName_AspNetSqlRoleProvider = "AspNetSqlRoleProvider";
+        public const string ProviderName_AspNetWindowsTokenRoleProvider = "AspNetWindowsTokenRoleProvider";
+		public const string ApplicationName = "/DotNetProgrammersToolbox";
+	}
+}
+<#+
+        public const string ConnectionStringsKey_ApplicationServices = "ApplicationServices";
+        public const string ConnectionStringsKey_LDAPRoot = "LDAPRoot";
+        public const string ProviderName_AspNetSqlMembershipProvider = "AspNetSqlMembershipProvider";
+        public const string ProviderName_AspNetSqlProfileProvider = "AspNetSqlProfileProvider";
+        public const string ProviderName_AspNetSqlRoleProvider = "AspNetSqlRoleProvider";
+        public const string ProviderName_AspNetWindowsTokenRoleProvider = "AspNetWindowsTokenRoleProvider";
+		public const string ApplicationName = "/DotNetProgrammersToolbox";
+
+        private void EnsureConnectionStrings(XDocument webConfig)
+        {
+            XElement connectionStringsElement = webConfig.Root.Element("connectionStrings");
+            if (connectionStringsElement == null)
+            {
+                connectionStringsElement = new XElement("connectionStrings");
+                webConfig.Root.Add(connectionStringsElement);
+            }
+
+            if (!(connectionStringsElement.Elements("add").Select(e => e.Attribute("name"))).Any(a => a != null && a.Value == ConnectionStringsKey_ApplicationServices))
+                connectionStringsElement.Add(new XElement("add",
+                new XAttribute("name", ConnectionStringsKey_ApplicationServices),
+                new XAttribute("connectionString", @"data source=.\SQLEXPRESS;Integrated Security=SSPI;AttachDBFilename=|DataDirectory|\aspnetdb.mdf;User Instance=true"),
+                new XAttribute("providerName", "System.Data.SqlClient")));
+
+            if (connectionStringsElement.Elements("add").Select(e => e.Attribute("name")).Any(a => a != null && a.Value == ConnectionStringsKey_LDAPRoot))
+                return;
+
+            connectionStringsElement.Add(new XElement("add",
+                new XAttribute("name", ConnectionStringsKey_LDAPRoot),
+                new XAttribute("connectionString", @"WINNT://" + Environment.MachineName)));
+        }
+
+        private void EnsureSystemWeb(XDocument webConfig)
+        {
+            XElement systemWebElement = webConfig.Root.Element("system.web");
+            if (systemWebElement == null)
+            {
+                systemWebElement = new XElement("system.web");
+                webConfig.Root.Add(systemWebElement);
+            }
+
+            this.EnsureSystemWebCompilation(systemWebElement);
+            this.EnsureSystemWebAuthentication(systemWebElement);
+            this.EnsureSystemWebMembership(systemWebElement);
+            this.EnsureSystemWebProfile(systemWebElement);
+            this.EnsureSystemWebRoleManager(systemWebElement);
+        }
+
+        private void EnsureSystemWebCompilation(XElement systemWebElement)
+        {
+            XElement compilationElement = systemWebElement.Element("compilation");
+            if (compilationElement == null)
+            {
+                compilationElement = new XElement("compilation");
+                systemWebElement.Add(compilationElement);
+            }
+
+            if (compilationElement.Attribute("debug") == null)
+                compilationElement.Add(new XAttribute("debug", true));
+
+            if (compilationElement.Attribute("targetFramework") == null)
+                compilationElement.Add(new XAttribute("targetFramework", "4.0"));
+        }
+
+        private void EnsureSystemWebAuthentication(XElement systemWebElement)
+        {
+            XElement compilationElement = systemWebElement.Element("authentication");
+            if (compilationElement == null)
+            {
+                compilationElement = new XElement("authentication");
+                systemWebElement.Add(compilationElement);
+            }
+
+            if (compilationElement.Attribute("mode") == null)
+                compilationElement.Add(new XAttribute("mode", "Windows"));
+        }
+
+        private void EnsureSystemWebMembership(XElement systemWebElement)
+        {
+            XElement compilationElement = systemWebElement.Element("membership");
+            if (compilationElement == null)
+            {
+                compilationElement = new XElement("membership");
+                systemWebElement.Add(compilationElement);
+            }
+
+            XElement providersElement = compilationElement.Element("providers");
+            if (providersElement == null)
+            {
+                providersElement = new XElement("providers", new XElement("clear"));
+            }
+
+            if (providersElement.Elements("add").Select(e => e.Attribute("name")).Any(a => a != null && a.Value == ProviderName_AspNetSqlMembershipProvider))
+                return;
+
+            providersElement.Add(new XElement("add",
+                                    new XAttribute("name", ProviderName_AspNetSqlMembershipProvider),
+                                    new XAttribute("type", "System.Web.Security.SqlMembershipProvider"),
+                                    new XAttribute("connectionStringName", "ApplicationServices"),
+                                    new XAttribute("enablePasswordRetrieval", false),
+                                    new XAttribute("enablePasswordReset", true),
+                                    new XAttribute("requiresQuestionAndAnswer", false),
+                                    new XAttribute("requiresUniqueEmail", false),
+                                    new XAttribute("maxInvalidPasswordAttempts", 5),
+                                    new XAttribute("minRequiredPasswordLength", 6),
+                                    new XAttribute("minRequiredNonalphanumericCharacters", 0),
+                                    new XAttribute("passwordAttemptWindow", 10),
+                                    new XAttribute("applicationName", ApplicationName)));
+            compilationElement.Add(providersElement);
+        }
+
+        private void EnsureSystemWebProfile(XElement systemWebElement)
+        {
+            XElement compilationElement = systemWebElement.Element("membership");
+            if (compilationElement == null)
+            {
+                compilationElement = new XElement("membership");
+                systemWebElement.Add(compilationElement);
+            }
+
+            XElement providersElement = compilationElement.Element("providers");
+            if (providersElement == null)
+            {
+                providersElement = new XElement("providers", new XElement("clear"));
+            }
+
+            if (providersElement.Elements("add").Select(e => e.Attribute("name")).Any(a => a != null && a.Value == ProviderName_AspNetSqlProfileProvider))
+                return;
+
+            providersElement.Add(new XElement("add",
+                                    new XAttribute("name", ProviderName_AspNetSqlProfileProvider),
+                                    new XAttribute("type", "System.Web.Profile.SqlProfileProvider"),
+                                    new XAttribute("connectionStringName", "ApplicationServices"),
+                                    new XAttribute("applicationName", ApplicationName)));
+        }
+
+        private void EnsureSystemWebRoleManager(XElement systemWebElement)
+        {
+            XElement compilationElement = systemWebElement.Element("membership");
+            if (compilationElement == null)
+            {
+                compilationElement = new XElement("membership");
+                systemWebElement.Add(compilationElement);
+            }
+
+            XElement providersElement = compilationElement.Element("providers");
+            if (providersElement == null)
+            {
+                providersElement = new XElement("providers", new XElement("clear"));
+            }
+
+            if (!providersElement.Elements("add").Select(e => e.Attribute("name")).Any(a => a != null && a.Value == ProviderName_AspNetSqlRoleProvider))
+                providersElement.Add(new XElement("add",
+                                        new XAttribute("name", ProviderName_AspNetSqlRoleProvider),
+                                        new XAttribute("type", "System.Web.Profile.SqlProfileProvider"),
+                                        new XAttribute("connectionStringName", "ApplicationServices"),
+                                        new XAttribute("applicationName", ApplicationName)));
+
+            if (providersElement.Elements("add").Select(e => e.Attribute("name")).Any(a => a != null && a.Value == ProviderName_AspNetWindowsTokenRoleProvider))
+                return;
+
+            providersElement.Add(new XElement("add",
+                                    new XAttribute("name", ProviderName_AspNetWindowsTokenRoleProvider),
+                                    new XAttribute("type", "System.Web.Security.WindowsTokenRoleProvider"),
+                                    new XAttribute("applicationName", ApplicationName)));
+        }
+
+        private void EnsureSystemWebServer(XDocument webConfig)
+        {
+            XElement compilationElement = webConfig.Root.Element("system.webServer");
+            if (compilationElement == null)
+            {
+                compilationElement = new XElement("system.webServer");
+                webConfig.Root.Add(compilationElement);
+            }
+            XElement modulesElement = compilationElement.Element("modules");
+            if (modulesElement == null)
+            {
+                modulesElement = new XElement("modules");
+                compilationElement.Add(modulesElement);
+            }
+
+            if (compilationElement.Attribute("runAllManagedModulesForAllRequests") == null)
+                compilationElement.Add(new XAttribute("runAllManagedModulesForAllRequests", true));
+        }
+#>
