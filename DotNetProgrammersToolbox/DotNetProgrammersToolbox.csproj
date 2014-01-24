@@ -20,6 +20,10 @@
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
     <OldToolsVersion>4.0</OldToolsVersion>
+    <IISExpressSSLPort />
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -63,6 +67,11 @@
     <Content Include="Account\Login.aspx" />
     <Content Include="Account\Register.aspx" />
     <Content Include="App_Themes\Theme1\StyleSheet1.css" />
+    <Content Include="Colors.html">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Colors.tt</DependentUpon>
+    </Content>
     <Content Include="HTMLPage1.htm" />
     <Content Include="RegexPatterns\Default.aspx" />
     <Content Include="RegexPatterns\RegexEditor.aspx" />
@@ -242,6 +251,10 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_Themes\Theme1\Skin1.skin" />
+    <Content Include="Colors.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Colors.html</LastGenOutput>
+    </Content>
     <None Include="Web.Config.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Web.Config.cs</LastGenOutput>
